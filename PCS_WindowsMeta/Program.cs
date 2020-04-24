@@ -64,7 +64,12 @@ namespace PCS_WindowsMeta
             UpdateData(sqlite_conn, usrPath);
 
             Console.WriteLine("\nFinished updating the database!\n");
+
+            // Exit when user presses Enter key
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.Write("Press Enter to exit.");
             Console.ResetColor();
+            Console.ReadKey(true);
         }
 
         // User Path Confirmation
