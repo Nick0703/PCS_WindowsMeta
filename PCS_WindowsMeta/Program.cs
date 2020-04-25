@@ -15,7 +15,7 @@ namespace PCS_WindowsMeta
             string newCustomPath = "\nEnter your custom Metadata path (e.g. D:\\Plex Media Server\\): ";
 
             // Plex/DB paths
-            string pmsInstall = @"%localappdata%\Plex Media Server\"; ;
+            string pmsInstall = @"%localappdata%\Plex Media Server\";
             string pmsDd = @"Plug-in Support\Databases\com.plexapp.plugins.library.db";
             string usrMountPath;
             pmsInstall = Environment.ExpandEnvironmentVariables(pmsInstall);
