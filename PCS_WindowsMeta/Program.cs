@@ -6,62 +6,136 @@ namespace PCS_WindowsMeta
 {
     class Program
     {
-        static string pmsInstall = @"%localappdata%\Plex Media Server\";
-        static string pmsDd = @"Plug-in Support\Databases\com.plexapp.plugins.library.db";
-
         static void Main(string[] args)
         {
+            // Set the title
+            Console.Title = "PlexCloudServers DB Update Utility";
+
             // Messages
-            string newPathMsg = "Enter the path of your mount location such as: ";
-            string newPathEx = @"(E.g. Z:\, Z:\Media\ or Z:\Shared drives\PlexCloudServers\Media\)";
-            string newPathInput = "\nYour path: ";
+            string newCustomPath = "\nEnter your custom Metadata path (e.g. D:\\Plex Media Server\\): ";
 
             // Plex/DB paths
+            string pmsInstall = @"%localappdata%\Plex Media Server\"; ;
+            string pmsDd = @"Plug-in Support\Databases\com.plexapp.plugins.library.db";
+            string usrMountPath;
             pmsInstall = Environment.ExpandEnvironmentVariables(pmsInstall);
             pmsDd = Environment.ExpandEnvironmentVariables(pmsDd);
 
+            // Display the Main message
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("PCS Metadata DB Update Utility (Wind0ws Version)\n");
+            Console.WriteLine("PCS Metadata DB Update Utility (Wind0ws Version)");
+            makeLines();
+            Console.ForegroundColor = ConsoleColor.White;
+
+            //bool correctAns;
+            string dbPath;
+            // Ask for the type of installation
+            do
+            {
+                Console.WriteLine("Please specify where your Plex Metadata is located:\n");
+                Console.WriteLine("1. Default (%localappdata%)");
+                Console.WriteLine("2. Custom path install\n");
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.Write("Enter 1 or 2: ");
+                Console.ForegroundColor = ConsoleColor.White;
+                string usrOpt = Console.ReadLine();
+
+                // Check which option
+                var charc = usrOpt?.ToLower();
+                if (charc == "1") // Default metadata path
+                {
+                    dbPath = Path.Combine(pmsInstall, pmsDd);
+                    break;
+                }
+                else if (charc == "2") // Custom metadata path
+                {
+                    Console.Write(newCustomPath);
+                    string customPath = Console.ReadLine();
+
+                    // Confirm with the user if the path is correct
+                    while (!confirmation(customPath))
+                    {
+                        // Ask for the user's mount path
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.Write(newCustomPath);
+
+                        // Get the input from the user
+                        customPath = Console.ReadLine();
+                    }
+
+                    // Make sure that custom path ends with '\'
+                    if (!customPath.EndsWith(@"\"))
+                    {
+                        customPath += @"\";
+                    }
+
+                    // Set it as environment path
+                    customPath = Environment.ExpandEnvironmentVariables(customPath);
+
+                    // Check if that directory exists
+                    if (Directory.Exists(customPath))
+                    {
+                        dbPath = Path.Combine(customPath, pmsDd);
+                        break;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("\nPath doesn't exists!\n");
+                        Console.ForegroundColor = ConsoleColor.White;
+                    }
+                }
+                else // Wrong answer
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("\nIncorrect option!\n");
+                    Console.ForegroundColor = ConsoleColor.White;
+                    //correctAns = false;
+                }
+            } while (true);
+
+            makeLines();
 
             // Ask for the user's mount path
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine(newPathMsg);
-            Console.WriteLine(newPathEx);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.Write(newPathInput);
-            Console.ForegroundColor = ConsoleColor.White;
-
-            // Get the input from the user
-            string usrPath = Console.ReadLine();
-
-            // Get the confirmation from the user if the path is correct
-            while (!confirmation(usrPath))
+            do
             {
-                // Ask for the user's mount path
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine("\n" + newPathMsg);
-                Console.WriteLine(newPathEx);
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.Write(newPathInput);
-                Console.ForegroundColor = ConsoleColor.White;
+                usrMountPath = getMountPath();
 
-                // Get the input from the user
-                usrPath = Console.ReadLine();
-            }
+                // Get the confirmation from the user if the path is correct
+                while (!confirmation(usrMountPath))
+                {
+                    // Ask for the user's mount path
+                    usrMountPath = getMountPath();
+                }
 
-            // Make sure that the user's path ends with '\'
-            if (!usrPath.EndsWith(@"\"))
-            {
-                usrPath += @"\";
-            }
+                // Make sure that the user's path ends with '\'
+                if (!usrMountPath.EndsWith(@"\"))
+                {
+                    usrMountPath += @"\";
+                }
+
+                // Check if that mount path exists
+                string usrMount = Environment.ExpandEnvironmentVariables(usrMountPath);
+                if (Directory.Exists(usrMount))
+                {
+                    break;
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("\nThe mount path does not exist!\n");
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
+            } while (true);
 
             // Create the connection
-            SQLiteConnection sqlite_conn = CreateConnection();
+            makeLines();
+            SQLiteConnection sqlite_conn = CreateConnection(dbPath);
 
             // Do the changes in the DB
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("\nUpdating the database, this may take a few seconds...");
-            UpdateData(sqlite_conn, usrPath);
+            Console.WriteLine("Updating the database, this may take a few seconds...");
+            UpdateData(sqlite_conn, usrMountPath);
 
             Console.WriteLine("\nFinished updating the database!\n");
 
@@ -70,6 +144,31 @@ namespace PCS_WindowsMeta
             Console.Write("Press Enter to exit.");
             Console.ResetColor();
             Console.ReadKey(true);
+        }
+
+        static void makeLines()
+        {
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine("\n***********************************************************************************\n");
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+
+        // Get the mount path
+        static string getMountPath()
+        {
+            string newPathMsg = "Enter the path of your mount location such as: ";
+            string newPathEx = @"(E.g. Z:\, Z:\Media\ or Z:\Shared drives\PlexCloudServers\Media\)";
+            string newPathInput = "\nYour path: ";
+
+            Console.WriteLine(newPathMsg + "\n" + newPathEx);
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write(newPathInput);
+            Console.ForegroundColor = ConsoleColor.White;
+
+            // Get the input from the user
+            string usrMountPath = Console.ReadLine();
+
+            return usrMountPath;
         }
 
         // User Path Confirmation
@@ -100,9 +199,8 @@ namespace PCS_WindowsMeta
         }
 
         // Database Connection
-        static SQLiteConnection CreateConnection()
+        static SQLiteConnection CreateConnection(string dbPath)
         {
-            string dbPath = Path.Combine(pmsInstall, pmsDd);
             string connString = string.Format("Data Source={0}", dbPath);
 
             SQLiteConnection sqlite_conn;
@@ -112,7 +210,12 @@ namespace PCS_WindowsMeta
             {
                 sqlite_conn.Open();
             }
-            catch (Exception) { }
+            catch (Exception)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("\nUnable to open the database\n");
+                Console.ResetColor();
+            }
 
             return sqlite_conn;
         }
