@@ -116,7 +116,8 @@ namespace PCS_WindowsMeta
 
                 // Check if that mount path exists
                 string usrMount = Environment.ExpandEnvironmentVariables(usrMountPath);
-                if (Directory.Exists(usrMount))
+                var pcsMount = Path.Combine(usrMount, "Movies");
+                if (Directory.Exists(pcsMount))
                 {
                     break;
                 }
